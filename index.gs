@@ -61,7 +61,57 @@ function reply(token,mes) {
   return UrlFetchApp.fetch(replyUrl, options);
 }
 
-/**
+function memoRep(token){
+    var headers = {
+    "Content-Type" : "application/json; charset=UTF-8",
+    'Authorization': 'Bearer ' + access_token,
+  };
+
+  var postData = {
+    "replyToken" : token,
+    "messages" : [
+      {
+        "type":"template",
+        "altText":"this is a memo template",
+        "template":{
+          "type":"buttons",
+          "actions":[
+            {
+              "type":"message",
+              "label":"メモリスト",
+              "text": "mread"
+            },
+            {
+              "type":"message",
+              "label":"追加",
+              "text": "madd"
+            },
+            /*
+            {
+              "type":"message",
+              "label":"削除",
+              "text": "mdelete"
+            },
+            */
+            ],
+            "thumbnailImageUrl":"https://i0.wp.com/tatomac.net/wp-content/uploads/2017/01/slooProImg_20170114190255.jpg?resize=500%2C500&ssl=1",
+            "title":"メモ帳たんたん♪",
+            "text":"やりたい操作を選んでね💫"
+        }
+      }
+    ]
+  };      
+ 
+  var options = {
+    "method" : "post",
+    "headers" : headers,
+    "payload" : JSON.stringify(postData)
+  };
+ 
+  return UrlFetchApp.fetch(replyUrl, options);
+}
+      
+/*
  * postされたときの処理
  */
 function doPost(e) {
@@ -69,51 +119,75 @@ function doPost(e) {
   var data = json.events;
   var replyToken = json.events[0].replyToken;
   var messageReceive = json.events[0].message.text;
-  var messageSend;
+  var messageSend="";
+  var usrID=json.events[0].source.userId;
   var memoMode=SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(2,2).getValue();
   var memoColumn = SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(2,1).getValue();
+  var date = new Date();
+  var usrNum=getUsrNum(usrID);
   log(data);
-  
+    
+    
   if(memoMode==1){
-    SpreadsheetApp.openById(spreadsheet_id).getSheetByName('memo').getRange(memoColumn,1).setValue(messageReceive);
+    insertMemoList(usrNum,messageReceive);
     setMemoMode(0);
-    memoColumn++;
-    SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(2,1).setValue(memoColumn);
-    messageSend="登録完了♪";
-  }else if(messageReceive=="memo-r"){
-    var temp="";
-    for(var i=1; i<memoColumn; i++){
-      temp =temp+i.toString()+SpreadsheetApp.openById(spreadsheet_id).getSheetByName('memo').getRange(i,1).getValue()+"\n";
-    }
-    messageSend=temp;
-  }else if(messageReceive=="memo-w"){
-    messageSend="ほーい、メモする内容を教えて";
-    setMemoMode(1);
-  }else{
+    reply(replyToken,"追加したぞい🌟");
+    return;
+  }
   
-    switch(messageReceive){
-      case "三木谷":
-        messageSend="うんこまーん♪";
-        break;
-      case "奥野":
-        messageSend="留年無い内定野郎";
-        break;
-      case "tmnr":
-        messageSend="うんこぺーすとものり";
-        break;
-      case "ケビン":
-        messageSend="お前が自己啓発本読めや";
-        break;
-      default:
-        messageSend=messageReceive+'たんたん';
-        break;      
-    }
-
+  switch(messageReceive){
+    case "memo":
+    case "メモ":
+      memoRep(replyToken);
+      return;
+    case "mread":
+      var memoList=getMemoList(usrNum);
+      reply(replyToken,memoList);
+      return;
+    case "madd":
+      setMemoMode(1);
+      reply(replyToken,"はーい、メモする内容を記入するたんたん");
+    　　　　return;
+    case "三木谷":
+      messageSend="うんこまーん♪";
+      break;
+    case "奥野":
+      messageSend="留年無い内定野郎";
+      break;
+    case "tmnr":
+      messageSend="うんこぺーすとものり";
+      break;
+    case "ケビン":
+      messageSend="お前が自己啓発本読めや";
+      break; 
+    default:
+      messageSend= messageReceive+"たんたん";
+      break;
   }
   
   reply(replyToken,messageSend);  
 }
 
+function insertMemoList(id,msg){
+    insertDB(memoDB,"(ID_num,memo)","("+id+",'"+msg+"')");
+    
+}
+
+function getUsrNum(id){
+  var usrNum= Number(selectDB(profileDB,"ID_num","where ID ='"+ id+"'").toString());
+  return usrNum;
+} 
+  
+function getMemoList(id_num){
+  var temp=selectDB(memoDB,"memo","where ID_num ="+id_num);
+  var temp2="";
+  for(var i=0;i<temp.length;i++){
+      temp2=temp2+temp[i][0]+"\n";
+      }
+  temp2=temp2.slice(0,-1);
+  return temp2;
+}
+  
 //log
 function log(data){
   var logColumn = SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(1,1).getValue();
@@ -123,6 +197,7 @@ function log(data){
 }
 
 function setMemoMode(num){
+  //0:false, 1:add 2,delete
   SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(2,2).setValue(num);
 }
 /**
@@ -139,25 +214,21 @@ function morningCall() {
     case 1://月曜
       msg='おはよう、今日は...月曜日ですね(´;ω;｀)　がーんばるぞい♪';
       break;
+    case 2://火曜
+      msg='おす、おら孫悟空！ 火曜日は俺の出番だぜ！ 今日も1日頑張ろうな！！'
+    case 3://水曜
+      msg='Good Morning. You look so wonderful today! Hoping you have a good day^^'
     default:
       msg='おっはよーー';
       break;
   }
-  var pushTo = selectDB(profileDB,"ID","where name='Me'")
-  push(msg,pushTo);
+  var pushTo = selectDB(profileDB,"ID","where ID_num=1").toString();
+  push("メモって打ってみるといいどん\nでもまだまだ開発中だどん\nバグがあったら教えて欲しいどん♪",pushTo);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+function messageForALL(){
+  var User = selectDB(profileDB,"ID","").toString();
+  for(var i=0;i<User.length;i++){
+    push("",User[i][0]);
+  }  
+}
