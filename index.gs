@@ -4,6 +4,7 @@ var access_token = "gCjz7rdS4acOP03bBTXTg4+0ehR98xcfjPZgdRdaqu6/SUZNciEImKJcsq70
 var spreadsheet_id = "1tSMYNPh3gapK84ZCHe81Rnx4oCUkEqXXUR3OH7IB69g"
 var replyUrl = "https://api.line.me/v2/bot/message/reply";
 var pushUrl = "https://api.line.me/v2/bot/message/push";
+var date=new Date();
 /**
  * 指定のuser_idにpushをする
  */
@@ -29,6 +30,7 @@ function push(text,to) {
     "payload" : JSON.stringify(postData)
   };
  
+  send_log(options);
   return UrlFetchApp.fetch(pushUrl, options);
 }
  
@@ -58,6 +60,7 @@ function reply(token,mes) {
     "payload" : JSON.stringify(postData)
   };
  
+  send_log(options)
   return UrlFetchApp.fetch(replyUrl, options);
 }
 
@@ -86,13 +89,11 @@ function memoRep(token){
               "label":"追加",
               "text": "madd"
             },
-            /*
             {
               "type":"message",
               "label":"削除",
               "text": "mdelete"
             },
-            */
             ],
             "thumbnailImageUrl":"https://i0.wp.com/tatomac.net/wp-content/uploads/2017/01/slooProImg_20170114190255.jpg?resize=500%2C500&ssl=1",
             "title":"メモ帳たんたん♪",
@@ -108,6 +109,7 @@ function memoRep(token){
     "payload" : JSON.stringify(postData)
   };
  
+  send_log(options);    
   return UrlFetchApp.fetch(replyUrl, options);
 }
       
@@ -135,6 +137,13 @@ function doPost(e) {
     return;
   }
   
+  if(memoMode==2){
+    setMemoMode(0);
+    deleteMemoList(usrNum,messageReceive);
+    reply(replyToken,"消したぞい★");
+    return;
+  }
+  
   switch(messageReceive){
     case "memo":
     case "メモ":
@@ -147,7 +156,13 @@ function doPost(e) {
     case "madd":
       setMemoMode(1);
       reply(replyToken,"はーい、メモする内容を記入するたんたん");
-    　　　　return;
+    　return;
+    case "mdelete":
+      setMemoMode(2);
+      var delList=getMemoList(usrNum);
+      delList="削除する行を選ぶたんたん\n"+delList;
+      reply(replyToken,delList);
+      return;
     case "三木谷":
       messageSend="うんこまーん♪";
       break;
@@ -179,22 +194,41 @@ function getUsrNum(id){
 } 
   
 function getMemoList(id_num){
-  var temp=selectDB(memoDB,"memo","where ID_num ="+id_num);
+  var temp=selectDB(memoDB,"memo,memo_id","where ID_num ="+id_num);
   var temp2="";
   for(var i=0;i<temp.length;i++){
-      temp2=temp2+temp[i][0]+"\n";
+    temp2=temp2+ temp[i][1] +" : "+temp[i][0]+"\n";
       }
   temp2=temp2.slice(0,-1);
   return temp2;
+}
+
+function deleteMemoList(id,messageReceive){
+  try{
+  deleteDB(memoDB,"where ID_num= "+id+" and memo_id= "+messageReceive);
+  }
+  catch(e){
+  　return;
+  }
+  return;
 }
   
 //log
 function log(data){
   var logColumn = SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(1,1).getValue();
   SpreadsheetApp.openById(spreadsheet_id).getSheetByName('log').getRange(logColumn,1).setValue(data);
+  SpreadsheetApp.openById(spreadsheet_id).getSheetByName('log').getRange(logColumn,2).setValue(date);  
   logColumn++;
   SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(1,1).setValue(logColumn);
 }
+
+function send_log(data){
+  var slColumn=SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(3,1).getValue();
+  SpreadsheetApp.openById(spreadsheet_id).getSheetByName('send_log').getRange(slColumn,1).setValue(data);
+  SpreadsheetApp.openById(spreadsheet_id).getSheetByName('send_log').getRange(slColumn,2).setValue(date);  
+  slColumn++;
+  SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(3,1).setValue(slColumn);
+}  
 
 function setMemoMode(num){
   //0:false, 1:add 2,delete
@@ -204,9 +238,8 @@ function setMemoMode(num){
  * pushをしてみる
  */
 function morningCall() {
-  var date = new Date();
   var dayWeek = date.getDay();
-  var meg='';
+  var msg;
   switch(dayWeek){
     case 0://日曜
       msg='おはよう、今日は日曜日です。良い休日を^^';
@@ -217,13 +250,13 @@ function morningCall() {
     case 2://火曜
       msg='おす、おら孫悟空！ 火曜日は俺の出番だぜ！ 今日も1日頑張ろうな！！'
     case 3://水曜
-      msg='Good Morning. You look so wonderful today! Hoping you have a good day^^'
+      msg='おはようだにゃ～。今何時かにゃ～～？？'
     default:
       msg='おっはよーー';
       break;
   }
-  var pushTo = selectDB(profileDB,"ID","where ID_num=1").toString();
-  push("メモって打ってみるといいどん\nでもまだまだ開発中だどん\nバグがあったら教えて欲しいどん♪",pushTo);
+  var pushTo = selectDB(profileDB,"ID","where ID_num=2").toString();
+  push(msg,pushTo);
 }
 
 function messageForALL(){

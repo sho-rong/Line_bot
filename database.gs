@@ -17,6 +17,17 @@ function insertDB(db,col,data){
   FusionTables.Query.sql(sql);
   Logger.log(data);
 }
+
+function deleteDB(db,data){
+  var sql = "DELETE FROM " + db + " " + data;
+  FusionTables.Query.sql(sql);
+  Logger.log(data);
+}  
+  
+function test6(){
+  temp=selectDB(memoDB,"memo,memo_id","where ID_num =1");
+  Logger.log(temp[1][0]);
+}
   
 
 function test3(){
