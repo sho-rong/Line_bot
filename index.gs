@@ -160,21 +160,9 @@ function doPost(e) {
     case "mdelete":
       setMemoMode(2);
       var delList=getMemoList(usrNum);
-      delList="削除する行を選ぶたんたん\n"+delList;
+      delList="削除する行の番号を入力するたんたん\n"+delList;
       reply(replyToken,delList);
       return;
-    case "三木谷":
-      messageSend="うんこまーん♪";
-      break;
-    case "奥野":
-      messageSend="留年無い内定野郎";
-      break;
-    case "tmnr":
-      messageSend="うんこぺーすとものり";
-      break;
-    case "ケビン":
-      messageSend="お前が自己啓発本読めや";
-      break; 
     default:
       messageSend= messageReceive+"たんたん";
       break;
@@ -238,6 +226,7 @@ function setMemoMode(num){
  * pushをしてみる
  */
 function morningCall() {
+  var date=new Date();
   var dayWeek = date.getDay();
   var msg;
   switch(dayWeek){

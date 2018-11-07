@@ -24,35 +24,3 @@ function deleteDB(db,data){
   Logger.log(data);
 }  
   
-function test6(){
-  temp=selectDB(memoDB,"memo,memo_id","where ID_num =1");
-  Logger.log(temp[1][0]);
-}
-  
-
-function test3(){
-  str="("+"1"+","+"'"+"test4"+"'"+")";
-  Logger.log(str);
-}
-
-
-function test2(){
-  insertDB(memoDB,"(ID_num,memo)","(1,'test4')");
-}
-
-function test(){
-  var re=selectDB(profileDB,"ID","where ID_num=1");
-  Logger.log(re);
-}
-
-  function test4(){
-    var tmp=selectDB(profileDB,"ID","");
-    for(var i=0;i<tmp.length;i++){
-      Logger.log(tmp[i][0]);
-    }
-  }
-
-function test5(){
-  var name=selectDB(profileDB,"ID","where ID_num=2").toString()
-  Logger.log(name);
-}
