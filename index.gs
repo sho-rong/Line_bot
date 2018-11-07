@@ -226,8 +226,8 @@ function setMemoMode(num){
  * pushをしてみる
  */
 function morningCall() {
-  var date=new Date();
-  var dayWeek = date.getDay();
+  var datehere=new Date();
+  var dayWeek = datehere.getDay();
   var msg;
   switch(dayWeek){
     case 0://日曜
@@ -237,9 +237,14 @@ function morningCall() {
       msg='おはよう、今日は...月曜日ですね(´;ω;｀)　がーんばるぞい♪';
       break;
     case 2://火曜
-      msg='おす、おら孫悟空！ 火曜日は俺の出番だぜ！ 今日も1日頑張ろうな！！'
+      msg='おす、おら孫悟空！ 火曜日は俺の出番だぜ！ 今日も1日頑張ろうな！！';
+      break;
     case 3://水曜
-      msg='おはようだにゃ～。今何時かにゃ～～？？'
+      msg='おはようだにゃ～。今何時かにゃ～～？？';
+      break;
+    case 4:
+      msg='マスターは昨晩力尽きました。寝言で美少女に生まれたいとほざいております。うにゃ～～\nところでcron実装したけど7時に届いてるかな？？';
+      break;
     default:
       msg='おっはよーー';
       break;
