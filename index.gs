@@ -1,106 +1,13 @@
 // line developersに書いてあるChannel Access Token
 var access_token = "gCjz7rdS4acOP03bBTXTg4+0ehR98xcfjPZgdRdaqu6/SUZNciEImKJcsq708qRUv2btxs0idBYl0sdjVQtZhbSDeVgxL3olr1qkoTyZvAJQl2XOSeF7vUMvaro/Nwd6dTtGTNG5f2zjH/i2xPw1IwdB04t89/1O/w1cDnyilFU="
-// postされたログを残すスプレッドシートのid
+// ログ用スプレッドシートのid
 var spreadsheet_id = "1tSMYNPh3gapK84ZCHe81Rnx4oCUkEqXXUR3OH7IB69g"
+//lineApiのUrl
 var replyUrl = "https://api.line.me/v2/bot/message/reply";
 var pushUrl = "https://api.line.me/v2/bot/message/push";
+//日付取得
 var date=new Date();
-var headers = {
-  "Content-Type" : "application/json; charset=UTF-8",
-  'Authorization': 'Bearer ' + access_token,
-};
 
-/**
- * 指定のuser_idにpushをする
- */
-function push(text,to) {
-  var postData = {
-    "to" : to,
-    "messages" : [
-      {
-        'type':'text',
-        'text':text,
-      }
-    ]
-  };
-  var options = {
-    "method" : "post",
-    "headers" : headers,
-    "payload" : JSON.stringify(postData)
-  };
-  send_log(options);
-  return UrlFetchApp.fetch(pushUrl, options);
-}
- 
-/**
- * reply_tokenを使ってreplyする
- */
-function reply(token,mes) {
-  var postData = {
-    "replyToken" : token,
-    "messages" : [
-      {
-        'type':'text',
-        'text': mes,
-      }
-    ]
-  };
-  var options = {
-    "method" : "post",
-    "headers" : headers,
-    "payload" : JSON.stringify(postData)
-  };
-  send_log(options)
-  return UrlFetchApp.fetch(replyUrl, options);
-}
-
-function memoRep(token){
-  var postData = {
-    "replyToken" : token,
-    "messages" : [
-      {
-        "type":"template",
-        "altText":"this is a memo template",
-        "template":{
-          "type":"buttons",
-          "actions":[
-            {
-              "type":"message",
-              "label":"メモリスト",
-              "text": "メモリスト"
-            },
-            {
-              "type":"message",
-              "label":"追加",
-              "text": "追加"
-            },
-            {
-              "type":"message",
-              "label":"削除",
-              "text": "削除"
-            },
-            {
-              "type":"message",
-              "label":"リマインド",
-              "text": "リマインド"
-            },            
-            ],
-            "thumbnailImageUrl":"https://i0.wp.com/tatomac.net/wp-content/uploads/2017/01/slooProImg_20170114190255.jpg?resize=500%2C500&ssl=1",
-            "title":"メモ帳たんたん♪",
-            "text":"やりたい操作を選んでね💫"
-        }
-      }
-    ]
-  };
-  var options = {
-        "method" : "post",
-        "headers" : headers,
-        "payload" : JSON.stringify(postData)
-  };
-  send_log(options);    
-  return UrlFetchApp.fetch(replyUrl, options);
-}
-      
 /*
  * postされたときの処理
  */
@@ -191,15 +98,25 @@ function remindMemo(id,msg){
 }
 
 function insertMemoList(id,msg){
-    //var memoListNum=Number(selectDB(profileDB,"memoList_num","where ID_num="+id))+1;
-    insertDB(memoDB,"(ID_num,memo)","("+id+",'"+msg+"')");
-    //updateDB(profileDB,"memoList_num="+memoListNum,"where ID_num="+id);
+  insertDB(memoDB,"(ID_num,memo)","("+id+",'"+msg+"')");
 }
 
 function getUsrNum(id){
-  var usrNum= Number(selectDB(profileDB,"ID_num","where ID ='"+ id+"'").toString());
+  var usrNum= Number(selectDB(profileDB,"ID_num","where ID ='"+ id+"'"));
+  if(isNaN(usrNum)==true){
+    usrNum=enrollProf(id);
+  }else{
+   usrNum=usrNum.toString(); 
+  }
   return usrNum;
-} 
+}
+
+function enrollProf(id){
+  var maxIdNum=Number(selectDB(profileDB,"MAXIMUM (ID_num)",""));
+  var inputId=maxIdNum+1;
+  insertDB(profileDB,"(ID_num,ID)","("+inputId+",'"+id+"')");
+  return inputId;
+}  
   
 function getMemoList(id_num){
   var temp=selectDB(memoDB,"memo,ROWID","where ID_num ="+id_num);
@@ -221,32 +138,25 @@ function deleteMemoList(id,messageReceive){
   return;
 }
   
-//log
 function log(data){
-  var logColumn = SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(1,1).getValue();
-  SpreadsheetApp.openById(spreadsheet_id).getSheetByName('log').getRange(logColumn,1).setValue(data);
-  SpreadsheetApp.openById(spreadsheet_id).getSheetByName('log').getRange(logColumn,2).setValue(date);  
-  logColumn++;
-  SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(1,1).setValue(logColumn);
+  var log=[data,date];
+  SpreadsheetApp.openById(spreadsheet_id).getSheetByName('log').getDataRange().appendRow(log);
 }
 
 function send_log(data){
-  var slColumn=SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(3,1).getValue();
-  SpreadsheetApp.openById(spreadsheet_id).getSheetByName('send_log').getRange(slColumn,1).setValue(data);
-  SpreadsheetApp.openById(spreadsheet_id).getSheetByName('send_log').getRange(slColumn,2).setValue(date);  
-  slColumn++;
-  SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(3,1).setValue(slColumn);
-}  
+  var log=[data,date];
+  SpreadsheetApp.openById(spreadsheet_id).getSheetByName('send_log').getDataRange().appendRow(log);
+}
 
 function setMemoMode(num){
-  //0:false, 1:add 2,delete
+  //set memoMode number as below
+  //0:false,1:add,2:delete,3:remind
   SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(2,2).setValue(num);
 }
 
 
-function morningCall(cron,row,sheet) {
-  var datehere=new Date();
-  var dayWeek = datehere.getDay();
+function morningCall() {
+  var dayWeek = date.getDay();
   var msg;
   switch(dayWeek){
     case 5:
@@ -268,3 +178,4 @@ function remindCronFunction(cron,row,sheet){
    sheet.getRange(row,9).setValue("yes"); // 最終リクエスト送信日時   
    push(msg,pushTo);
 } 
+
