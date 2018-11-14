@@ -5,6 +5,7 @@ var COLUMNS       = ['minute', 'hour', 'day', 'month', 'week'];
 var spreadsheet_id = "1tSMYNPh3gapK84ZCHe81Rnx4oCUkEqXXUR3OH7IB69g"
 
 function cronFunction() {
+  console.log("cronFunc now");
   var sheet = SpreadsheetApp.openById(spreadsheet_id).getSheetByName('cron');
   var cronList = getCronList(sheet);
   var currentTime = new Date();
@@ -30,12 +31,14 @@ function executeIfNeeded(cron, times, sheet, row) {
   if(cron[8]=="yes"){
     return;
   }
+  console.log("exe");
   for (var i in COLUMNS) { // minute, hour, day, month, weekを順番にチェックして全て条件にマッチするようならcron実行
     var timeType = COLUMNS[i];
     var timingList = getTimingList(cron[i], timeType);
-    //Logger.log(timingList);
-    //Logger.log(times[timeType]);
+    console.log(timingList);
+    console.log(times[timeType]);
     if (!isMatch(timingList, times[timeType])) {
+      console.log("not match");
       return false;
     }
   }
