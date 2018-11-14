@@ -30,7 +30,12 @@ function doPost(e) {
          SpreadsheetApp.openById(spreadsheet_id).getSheetByName('cron').getRange(lastRow+1,7).setValue(1);
          setSendMode(2);
          reply(replyToken,"次に送りたいメッセージを記入するにゃ");
-      }else{
+      }else if(messageReceive=="あーちゃん"){
+         SpreadsheetApp.openById(spreadsheet_id).getSheetByName('cron').getRange(lastRow+1,7).setValue(2);
+         setSendMode(2);
+         reply(replyToken,"次に送りたいメッセージを記入するにゃ");        
+      }
+      else{
         setSendMode(0);        
         reply(replyToken,"その送り相手は登録されてませんね～");
       }
@@ -42,20 +47,18 @@ function doPost(e) {
        reply(replyToken,"最後に、送る日時を指定してね～\n例）2018/12/25/9:00\n2010/1/1/0:00");
        return;
     case 3:
+       setSendMode(0);
        var lastRow = SpreadsheetApp.openById(spreadsheet_id).getSheetByName('cron').getLastRow();
        var sendMes=SpreadsheetApp.openById(spreadsheet_id).getSheetByName('cron').getRange(lastRow,10).getValue();
        var usrid=SpreadsheetApp.openById(spreadsheet_id).getSheetByName('cron').getRange(lastRow,7).getValue();
        SpreadsheetApp.openById(spreadsheet_id).getSheetByName('cron').deleteRow(lastRow);
        var msg = messageReceive.toString().split(/:|\//);      
-       var cronData=[msg[4],msg[3],msg[2],msg[1],"*","sendBookFunction",usrid,,"no",sendMes];
+       var cronData=[msg[4],msg[3],msg[2],msg[1],msg[0],"sendBookFunction",usrid,,"no",sendMes];
        SpreadsheetApp.openById(spreadsheet_id).getSheetByName('cron').appendRow(cronData);
-       setSendMode(0);
+       setTrigger(Number(msg[0]),Number(msg[1]),Number(msg[2]),Number(msg[3]),Number(msg[4]));
        reply(replyToken,"はーい、予約完了！");
        return;
   }
-        
-        
-        
     
   switch(memoMode){
     case 1:
@@ -120,10 +123,10 @@ function remindMemo(id,msg){
     //var lastRow = SpreadsheetApp.openById(spreadsheet_id).getSheetByName('cron').getLastRow();
     var cronData;
     if(message[1]==="朝"){
-      cronData= ["00-10","7","*","*","*","remindCronFunction",id,message[0],"no"];
+      cronData= ["00","7","*","*","*","remindCronFunction",id,message[0],"no"];
     }
     else if(message[1]==="夜"){
-      cronData= ["00-10","22","*","*","*","remindCronFunction",id,message[0],"no"];
+      cronData= ["00","21","*","*","*","remindCronFunction",id,message[0],"no"];
     }else{
       return "朝か夜だけだよ^^";
     }
@@ -198,17 +201,19 @@ function setSendMode(num){
   SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(2,3).setValue(num);
 }
 
-function morningCall() {
+function morningCall(cron,row,sheet) {
   var dayWeek = date.getDay();
+  var userid=cron[6];
   var msg;
   switch(dayWeek){
     case 1:
       msg='おはよー、今週もがんばろー';
       break;
-    default:
+    case 4:
+      msg='ちゃんと届いてるかな？？\n届いてたら次からは月曜だけ送信しまーす';
       return;
   }
-  var pushTo = selectDB(profileDB,"ID","where ID_num=2").toString();
+  var pushTo = selectDB(profileDB,"ID","where ID_num="+userid).toString();
   push(msg,pushTo);
 }
 

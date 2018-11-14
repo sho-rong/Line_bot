@@ -1,7 +1,7 @@
 var ALL = '*';
-var LIMIT_MATCHES = {'minute': '[0-5]?[0-9]', 'hour': '[01]?[0-9]|2[0-3]', 'day': '0?[1-9]|[1-2][0-9]|3[01]', 'month': '0?[1-9]|1[0-2]', 'week': '[0-6]'};
-var MAX_NUMBERS   = {'minute': 59, 'hour': 23, 'day': 31, 'month': 12, 'week': 6}; // 本物のcronは曜日の7を日曜と判定するが、手間なのでmax6とする
-var COLUMNS       = ['minute', 'hour', 'day', 'month', 'week'];
+var LIMIT_MATCHES = {'minute': '[0-5]?[0-9]', 'hour': '[01]?[0-9]|2[0-3]', 'day': '0?[1-9]|[1-2][0-9]|3[01]', 'month': '0?[1-9]|1[0-2]', 'year': '2[0-9][2-9][0-9]|201[8-9]'};
+var MAX_NUMBERS   = {'minute': 59, 'hour': 23, 'day': 31, 'month': 12, 'year':2999}; // 本物のcronは曜日の7を日曜と判定するが、手間なのでmax6とする
+var COLUMNS       = ['minute', 'hour', 'day', 'month', 'year'];
 var spreadsheet_id = "1tSMYNPh3gapK84ZCHe81Rnx4oCUkEqXXUR3OH7IB69g"
 
 function cronFunction() {
@@ -14,7 +14,7 @@ function cronFunction() {
     'hour':   Utilities.formatDate(currentTime, 'Asia/Tokyo', 'H'),
     'day':    Utilities.formatDate(currentTime, 'Asia/Tokyo', 'd'),
     'month':  Utilities.formatDate(currentTime, 'Asia/Tokyo', 'M'),
-    'week':   Utilities.formatDate(currentTime, 'Asia/Tokyo', 'u')
+    'year':   Utilities.formatDate(currentTime, 'Asia/Tokyo', 'y')
   };
   for (var i = 1; i < cronList.length; i++) { // スプレッドシートから取得した一行目(key:0)はラベルなので、key1から実行
     executeIfNeeded(cronList[i], times, sheet, i + 1);
@@ -32,7 +32,7 @@ function executeIfNeeded(cron, times, sheet, row) {
     return;
   }
   console.log("exe");
-  for (var i in COLUMNS) { // minute, hour, day, month, weekを順番にチェックして全て条件にマッチするようならcron実行
+  for (var i in COLUMNS) { // minute, hour, day, month, yearを順番にチェックして全て条件にマッチするようならcron実行
     var timeType = COLUMNS[i];
     var timingList = getTimingList(cron[i], timeType);
     console.log(timingList);
@@ -73,7 +73,6 @@ function getTimingList(timingStr, type) {
   var numReg   = new RegExp("^" + limitPattern + "$");                      // 単一指定パターン ex) 2
   var rangeReg = new RegExp("^" + limitPattern + "-" + limitPattern + "$"); // 範囲指定パターン ex) 1-5
   var devReg   = new RegExp("^\\*\/" + limitPattern + "$");                 // 間隔指定パターン ex) */10
-  //var commaSeparatedList = timingStr.split(','); // 共存指定パターン ex) 1,3-5
 
 
   if (match = timingStr.match(numReg)) { // 単一指定パターンにマッチしたら配列に追加
