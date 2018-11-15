@@ -5,8 +5,7 @@ var COLUMNS       = ['minute', 'hour', 'day', 'month', 'year'];
 
 function cronFunction() {
   console.log("cronFunc now");
-  var sheet = SpreadsheetApp.openById(spreadsheet_id).getSheetByName('cron');
-  var cronList = getCronList(sheet);
+  var cronList = getCronList(cronSheet);
   var currentTime = new Date();
   var times  = {
     'minute': Utilities.formatDate(currentTime, 'Asia/Tokyo', 'm'),
@@ -17,7 +16,7 @@ function cronFunction() {
   };
   for (var i = 1; i < cronList.length; i++) { // スプレッドシートから取得した一行目(key:0)はラベルなので、key1から実行
     console.log("cronList:"+cronList[i]);
-    executeIfNeeded(cronList[i], times, sheet, i + 1);
+    executeIfNeeded(cronList[i], times, cronSheet, i + 1);
   }
 }
 

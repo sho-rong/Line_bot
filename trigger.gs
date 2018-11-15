@@ -20,6 +20,15 @@ function delTrigger() {
 }
 */
 
+/*
+function showStatus(){
+  var myCell = cronSheet.getActiveCell(); //アクティブセルを取得
+  if(myCell.getValue()=="yes"){ //アクティブセルがI列かを判定
+    Browser.msgBox(myCell.getRow() + '行目のステータスが変更されました');
+  }
+}
+*/
+
 function setDailyCall(){
   var setTime= new Date();
   setTime.setHours(7);
