@@ -1,12 +1,16 @@
-// line developersに書いてあるChannel Access Token
-var access_token = "gCjz7rdS4acOP03bBTXTg4+0ehR98xcfjPZgdRdaqu6/SUZNciEImKJcsq708qRUv2btxs0idBYl0sdjVQtZhbSDeVgxL3olr1qkoTyZvAJQl2XOSeF7vUMvaro/Nwd6dTtGTNG5f2zjH/i2xPw1IwdB04t89/1O/w1cDnyilFU="
-// ログ用スプレッドシートのid
-var spreadsheet_id = "1tSMYNPh3gapK84ZCHe81Rnx4oCUkEqXXUR3OH7IB69g"
+var idDB="1pa46DGwJrv7WY3x_ESpZx9FQCsSgX-xDwBq314jg";
+var idArray=selectDB(idDB,"ID_Name,ID","");
+var access_token = idArray[0][1];
+var spreadsheet_id = idArray[1][1];
+var profileDB = idArray[2][1];
+var memoDB= idArray[3][1];
+
+
+//日付取得
+var date=new Date();
 //lineApiのUrl
 var replyUrl = "https://api.line.me/v2/bot/message/reply";
 var pushUrl = "https://api.line.me/v2/bot/message/push";
-//日付取得
-var date=new Date();
 
 /*
  * postされたときの処理
@@ -18,9 +22,9 @@ function doPost(e) {
   var messageReceive = json.events[0].message.text;
   var messageSend="";
   var usrID=json.events[0].source.userId;
-  var memoMode=SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(2,2).getValue();
-  var sendMode=SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(2,3).getValue();
-  var memoColumn = SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(2,1).getValue();
+  var valArray=SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getDataRange().getValues(); 
+  var memoMode=valArray[1][0];
+  var sendMode=valArray[1][1];
   var usrNum=getUsrNum(usrID);
   
   switch (sendMode){
@@ -192,13 +196,13 @@ function send_log(data){
 function setMemoMode(num){
   //set memoMode number as below
   //0:false,1:add,2:delete,3:remind
-  SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(2,2).setValue(num);
+  SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(2,1).setValue(num);
 }
 
 function setSendMode(num){
   //set memoMode number as below
-  //0:false,1:add,2:delete,3:remind
-  SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(2,3).setValue(num);
+  //0:wait,1:toSend,2:content,3:date
+  SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val').getRange(2,2).setValue(num);
 }
 
 function morningCall(cron,row,sheet) {
