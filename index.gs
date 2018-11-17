@@ -14,11 +14,13 @@ var sendlogSheet=SpreadsheetApp.openById(spreadsheet_id).getSheetByName('send_lo
 var valArray=valSheet.getDataRange().getValues(); 
 var memoMode=valArray[1][0];
 var sendMode=valArray[1][1];
+var enrollMode=valArray[1][2];
 //日付取得
 var date=new Date();
 //lineApiのUrl
 var replyUrl = "https://api.line.me/v2/bot/message/reply";
 var pushUrl = "https://api.line.me/v2/bot/message/push";
+var replyToken;
 
 /*
  * postされたときの処理
@@ -26,30 +28,42 @@ var pushUrl = "https://api.line.me/v2/bot/message/push";
 function doPost(e) {
   var json = JSON.parse(e.postData.contents);
   log(json);
-  var replyToken = json.events[0].replyToken;
+  replyToken = json.events[0].replyToken;
   var messageReceive = json.events[0].message.text;
   var messageSend="";
   var usrID=json.events[0].source.userId;
   var usrNum=getUsrNum(usrID);
   
+  if(usrNum=="NewEnroll"){
+    reply(replyToken,"はじめまして。よろしくね！");
+    return;
+  }
+  
+  switch(enrollMode){
+    case 1:
+      setEnrollMode(0);
+      updateDB(profileDB,"name='"+messageReceive+"'","WHERE ID_num="+usrNum);
+      reply(replyToken,"OK!登録～　この名前が送信予約の宛先になるよ～");
+      return;
+  }
+  
   switch (sendMode){
     case 1:
+      setSendMode(0);      
       var lastRow = cronSheet.getLastRow();
-      if(messageReceive=="しょーちゃん"){   
-         cronSheet.getRange(lastRow+1,7).setValue(1);
+      var sendID=Number(selectDB(profileDB,"ID_num","WHERE name='"+messageReceive+"'"));
+      if(sendID){
+         cronSheet.getRange(lastRow+1,7).setValue(sendID);
          setSendMode(2);
          reply(replyToken,"次に送りたいメッセージを記入するにゃ");
-      }else if(messageReceive=="あーちゃん"){
-         cronSheet.getRange(lastRow+1,7).setValue(2);
-         setSendMode(2);
-         reply(replyToken,"次に送りたいメッセージを記入するにゃ");        
       }
-      else{
-        setSendMode(0);        
-        reply(replyToken,"その送り相手は登録されてませんね～");
+      else{        
+        reply(replyToken,"その送り相手は登録されてませんね～\n最初からやり直してね！");
       }
       return;
     case 2:
+      var sender=selectDB(profileDB,"name","WHERE ID_num="+usrNum).toString();
+      messageReceive="from "+sender+"\n"+messageReceive;
       var lastRow = cronSheet.getLastRow();
       cronSheet.getRange(lastRow,10).setValue(messageReceive);
       setSendMode(3);
@@ -117,6 +131,10 @@ function doPost(e) {
       setSendMode(1);
       messageSend="送りたい相手を入力してね！";
       break;
+    case "プロフィール":
+      setEnrollMode(1);
+      messageSend="名前を教えてね♪";
+      break;
     default:
       messageSend= messageReceive+"にゃ";
       break;
@@ -153,19 +171,12 @@ function insertMemoList(id,msg){
 function getUsrNum(id){
   var usrNum= Number(selectDB(profileDB,"ID_num","where ID ='"+ id+"'"));
   if(isNaN(usrNum)==true){
-    usrNum=enrollProf(id);
+    usrNum=newCommer(id);
   }else{
    usrNum=usrNum.toString(); 
   }
   return usrNum;
 }
-
-function enrollProf(id){
-  var maxIdNum=Number(selectDB(profileDB,"MAXIMUM (ID_num)",""));
-  var inputId=maxIdNum+1;
-  insertDB(profileDB,"(ID_num,ID)","("+inputId+",'"+id+"')");
-  return inputId;
-}  
   
 function getMemoList(id_num){
   var temp=selectDB(memoDB,"memo,ROWID","where ID_num ="+id_num);
@@ -207,6 +218,12 @@ function setSendMode(num){
   //set memoMode number as below
   //0:wait,1:toSend,2:content,3:date
   valSheet.getRange(2,2).setValue(num);
+}
+
+function setEnrollMode(num){
+  //set EnrollMode
+  //1:Name,2:Sex,3:Birthday,4,Job
+  valSheet.getRange(2,3).setValue(num);
 }
 
 function morningCall(cron,row,sheet) {
