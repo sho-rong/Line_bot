@@ -1,20 +1,18 @@
-//get ID from DataBase
-var idDB="1pa46DGwJrv7WY3x_ESpZx9FQCsSgX-xDwBq314jg";
-var idArray=selectDB(idDB,"ID_Name,ID","");
-var access_token = idArray[0][1];
-var spreadsheet_id = idArray[1][1];
-var profileDB = idArray[2][1];
-var memoDB= idArray[3][1];
+var properties = PropertiesService.getScriptProperties();
+//get ID from Property
+var access_token = properties.getProperty("access_token");
+var spreadsheet_id = properties.getProperty("spreadsheet_id");
+var profileDB = properties.getProperty("profileDB");
+var memoDB= properties.getProperty("memoDB");
 //define sheet name
-var valSheet=SpreadsheetApp.openById(spreadsheet_id).getSheetByName('val');
 var cronSheet=SpreadsheetApp.openById(spreadsheet_id).getSheetByName('cron');
 var logSheet=SpreadsheetApp.openById(spreadsheet_id).getSheetByName('log');
 var sendlogSheet=SpreadsheetApp.openById(spreadsheet_id).getSheetByName('send_log');
 //get variable from sheet
-var valArray=valSheet.getDataRange().getValues(); 
-var memoMode=valArray[1][0];
-var sendMode=valArray[1][1];
-var enrollMode=valArray[1][2];
+var memoMode=Number(properties.getProperty("memoMode"));
+var sendMode=Number(properties.getProperty("sendMode"));
+var enrollMode=Number(properties.getProperty("enrollMode"));
+var translateMode=Number(properties.getProperty("translateMode"));
 //日付取得
 var date=new Date();
 //lineApiのUrl
@@ -47,6 +45,24 @@ function doPost(e) {
       return;
   }
   
+  switch(translateMode){
+    case 1:
+      properties.setProperty("translateMes", messageReceive);
+      reply(replyToken,"OK!,次に翻訳先の言語コードを教えて。\n英語:en\n中国語:zh\n日本語:ja\n韓国語:ko");
+      setTranslateMode(2);
+      return;
+    case 2:
+      setTranslateMode(0);
+      var transMes=properties.getProperty("translateMes");
+      try{
+      var result = LanguageApp.translate(transMes, "", messageReceive);
+      reply(replyToken,result);
+      }catch(e){
+        reply(replyToken,e);
+      }
+      return;
+  }
+      
   switch (sendMode){
     case 1:
       setSendMode(0);      
@@ -135,6 +151,20 @@ function doPost(e) {
       setEnrollMode(1);
       messageSend="名前を教えてね♪";
       break;
+    case "カレンダー":
+      var calId=selectDB(profileDB,"gmail","where ID_num="+usrNum).toString();
+      console.log(calId);
+      var cal=CalendarApp.getCalendarById(calId);
+      var nextMonth = new Date(date.getFullYear(), date.getMonth()+1, date.getDate());
+      // googleカレンダーより明日の予定を配列で取得。
+      var Event = cal.getEvents(date,nextMonth);
+      console.log(Event);
+      messageSend=calnderFunction(Event);
+      break;
+    case "翻訳":
+      setTranslateMode(1);
+      reply(replyToken,"翻訳したい文章を入力してね。");
+      break;
     default:
       messageSend= messageReceive+"にゃ";
       break;
@@ -211,19 +241,23 @@ function send_log(data){
 function setMemoMode(num){
   //set memoMode number as below
   //0:false,1:add,2:delete,3:remind
-  valSheet.getRange(2,1).setValue(num);
+  properties.setProperty("memoMode",num);
 }
 
 function setSendMode(num){
   //set memoMode number as below
   //0:wait,1:toSend,2:content,3:date
-  valSheet.getRange(2,2).setValue(num);
+  properties.setProperty("sendMode",num);
 }
 
 function setEnrollMode(num){
   //set EnrollMode
   //1:Name,2:Sex,3:Birthday,4,Job
-  valSheet.getRange(2,3).setValue(num);
+  properties.setProperty("enrollMode",num);
+}
+
+function setTranslateMode(num){
+  properties.setProperty("translateMode",num);
 }
 
 function morningCall(cron,row,sheet) {
@@ -234,9 +268,6 @@ function morningCall(cron,row,sheet) {
     case 1:
       msg='おはよー、月曜だね。\n今週もがんばろー';
       break;
-    case 4:
-      msg='ちゃんと届いてるかな？？\n届いてたら次からは月曜だけ送信しまーす';
-      return;
   }
   var pushTo = selectDB(profileDB,"ID","where ID_num="+userid).toString();
   push(msg,pushTo);
