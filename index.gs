@@ -9,10 +9,11 @@ var cronSheet=SpreadsheetApp.openById(spreadsheet_id).getSheetByName('cron');
 var logSheet=SpreadsheetApp.openById(spreadsheet_id).getSheetByName('log');
 var sendlogSheet=SpreadsheetApp.openById(spreadsheet_id).getSheetByName('send_log');
 //get variable from sheet
-var memoMode=Number(properties.getProperty("memoMode"));
-var sendMode=Number(properties.getProperty("sendMode"));
-var enrollMode=Number(properties.getProperty("enrollMode"));
-var translateMode=Number(properties.getProperty("translateMode"));
+var memoModeArray=JSON.parse(properties.getProperty("memoMode"));
+var sendModeArray=JSON.parse(properties.getProperty("sendMode"));
+var enrollModeArray=JSON.parse(properties.getProperty("enrollMode"));
+var translateModeArray=JSON.parse(properties.getProperty("translateMode"));
+
 //日付取得
 var date=new Date();
 //lineApiのUrl
@@ -30,16 +31,15 @@ function doPost(e) {
   var messageReceive = json.events[0].message.text;
   var messageSend="";
   var usrID=json.events[0].source.userId;
-  var usrNum=getUsrNum(usrID);
-  
-  if(usrNum=="NewEnroll"){
-    reply(replyToken,"はじめまして。よろしくね！");
-    return;
-  }
-  
+  var usrNum=getusrNum(usrID);
+  var memoMode=eval("memoModeArray.key"+usrNum);
+  var sendMode=eval("sendModeArray.key"+usrNum);
+  var enrollMode=eval("enrollModeArray.key"+usrNum);
+  var translateMode=eval("translateModeArray.key"+usrNum);
+   
   switch(enrollMode){
     case 1:
-      setEnrollMode(0);
+      setEnrollMode(usrNum,0);
       updateDB(profileDB,"name='"+messageReceive+"'","WHERE ID_num="+usrNum);
       reply(replyToken,"OK!登録～　この名前が送信予約の宛先になるよ～");
       return;
@@ -49,10 +49,10 @@ function doPost(e) {
     case 1:
       properties.setProperty("translateMes", messageReceive);
       reply(replyToken,"OK!,次に翻訳先の言語コードを教えて。\n英語:en\n中国語:zh\n日本語:ja\n韓国語:ko");
-      setTranslateMode(2);
+      setTranslateMode(usrNum,2);
       return;
     case 2:
-      setTranslateMode(0);
+      setTranslateMode(usrNum,0);
       var transMes=properties.getProperty("translateMes");
       try{
       var result = LanguageApp.translate(transMes, "", messageReceive);
@@ -65,12 +65,12 @@ function doPost(e) {
       
   switch (sendMode){
     case 1:
-      setSendMode(0);      
+      setSendMode(usrNum,0);      
       var lastRow = cronSheet.getLastRow();
       var sendID=Number(selectDB(profileDB,"ID_num","WHERE name='"+messageReceive+"'"));
       if(sendID){
          cronSheet.getRange(lastRow+1,7).setValue(sendID);
-         setSendMode(2);
+         setSendMode(usrNum,2);
          reply(replyToken,"次に送りたいメッセージを記入するにゃ");
       }
       else{        
@@ -82,11 +82,11 @@ function doPost(e) {
       messageReceive="from "+sender+"\n"+messageReceive;
       var lastRow = cronSheet.getLastRow();
       cronSheet.getRange(lastRow,10).setValue(messageReceive);
-      setSendMode(3);
+      setSendMode(usrNum,3);
       reply(replyToken,"最後に、送る日時を指定してね～\n例）2018/12/25/9:00\n2010/1/1/0:00");
       return;
     case 3:
-      setSendMode(0);
+      setSendMode(usrNum,0);
       var msg = messageReceive.toString().split(/:|\//);
       //ここに日時チェックを入れる
       var lastRow = cronSheet.getLastRow();
@@ -102,17 +102,17 @@ function doPost(e) {
     
   switch(memoMode){
     case 1:
-      setMemoMode(0);
+      setMemoMode(usrNum,0);
       insertMemoList(usrNum,messageReceive);
       reply(replyToken,"追加したぞい🌟");
       return;
     case 2:
-      setMemoMode(0);
+      setMemoMode(usrNum,0);
       var mes=deleteMemoList(usrNum,messageReceive);
       reply(replyToken,mes);
       return;
     case 3:
-      setMemoMode(0);
+      setMemoMode(usrNum,0);
       var resMes=remindMemo(usrNum,messageReceive);
       reply(replyToken,resMes);
       return;
@@ -129,26 +129,26 @@ function doPost(e) {
       messageSend=getMemoList(usrNum);
       break;
     case "追加":
-      setMemoMode(1);
+      setMemoMode(usrNum,1);
       messageSend="はーい、メモする内容を記入するたんたん";
     　break;
     case "削除":
-      setMemoMode(2);
+      setMemoMode(usrNum,2);
       var delList=getMemoList(usrNum);
       messageSend="削除する行の番号を入力するたんたん\n"+delList;
       break;
     case "リマインド":
-      setMemoMode(3);
+      setMemoMode(usrNum,3);
       var remindList=getMemoList(usrNum);
       remindList="メモ番号/朝またはメモ番号/夜って入力してね～(ex.1/夜)\n"+remindList;
       messageSend="------リマインド------\n"+remindList;
       break;
     case "送信予約":
-      setSendMode(1);
+      setSendMode(usrNum,1);
       messageSend="送りたい相手を入力してね！";
       break;
     case "プロフィール":
-      setEnrollMode(1);
+      setEnrollMode(usrNum,1);
       messageSend="名前を教えてね♪";
       break;
     case "カレンダー":
@@ -162,8 +162,8 @@ function doPost(e) {
       messageSend=calnderFunction(Event);
       break;
     case "翻訳":
-      setTranslateMode(1);
-      reply(replyToken,"翻訳したい文章を入力してね。");
+      setTranslateMode(usrNum,1);
+      messageSend="翻訳したい文章を入力してね。";
       break;
     default:
       messageSend= messageReceive+"にゃ";
@@ -198,7 +198,7 @@ function insertMemoList(id,msg){
   insertDB(memoDB,"(ID_num,memo)","("+id+",'"+msg+"')");
 }
 
-function getUsrNum(id){
+function getusrNum(id){
   var usrNum= Number(selectDB(profileDB,"ID_num","where ID ='"+ id+"'"));
   if(isNaN(usrNum)==true){
     usrNum=newCommer(id);
@@ -238,26 +238,35 @@ function send_log(data){
   sendlogSheet.appendRow(log);
 }
 
-function setMemoMode(num){
+function setMemoMode(usrid,num){
   //set memoMode number as below
   //0:false,1:add,2:delete,3:remind
-  properties.setProperty("memoMode",num);
+  eval("memoModeArray.key"+usrid+"="+num);
+  var temp=JSON.stringify(memoModeArray);
+  console.log(temp);
+  properties.setProperty("memoMode",temp);
 }
 
-function setSendMode(num){
+function setSendMode(usrid,num){
   //set memoMode number as below
   //0:wait,1:toSend,2:content,3:date
-  properties.setProperty("sendMode",num);
+  eval("sendModeArray.key"+usrid+"="+num);
+  var temp=JSON.stringify(sendModeArray);  
+  properties.setProperty("sendMode",temp);
 }
 
-function setEnrollMode(num){
+function setEnrollMode(usrid,num){
   //set EnrollMode
   //1:Name,2:Sex,3:Birthday,4,Job
-  properties.setProperty("enrollMode",num);
+  eval("enrollModeArray.key"+usrid+"="+num);
+  var temp=JSON.stringify(enrollModeArray);    
+  properties.setProperty("enrollMode",temp);
 }
 
-function setTranslateMode(num){
-  properties.setProperty("translateMode",num);
+function setTranslateMode(usrid,num){
+  eval("translateModeArray.key"+usrid+"="+num);
+  var temp=JSON.stringify(translateModeArray);  
+  properties.setProperty("translateMode",temp);
 }
 
 function morningCall(cron,row,sheet) {
