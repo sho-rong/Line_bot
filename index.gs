@@ -13,12 +13,14 @@ var memoModeArray=JSON.parse(properties.getProperty("memoMode"));
 var sendModeArray=JSON.parse(properties.getProperty("sendMode"));
 var enrollModeArray=JSON.parse(properties.getProperty("enrollMode"));
 var translateModeArray=JSON.parse(properties.getProperty("translateMode"));
+var sendAllMode=Number(properties.getProperty("sendAllMode"));
 
 //日付取得
 var date=new Date();
 //lineApiのUrl
 var replyUrl = "https://api.line.me/v2/bot/message/reply";
 var pushUrl = "https://api.line.me/v2/bot/message/push";
+var pushMultiUrl="https://api.line.me/v2/bot/message/multicast";
 var replyToken;
 
 /*
@@ -42,6 +44,18 @@ function doPost(e) {
       setEnrollMode(usrNum,0);
       updateDB(profileDB,"name='"+messageReceive+"'","WHERE ID_num="+usrNum);
       reply(replyToken,"OK!登録～　この名前が送信予約の宛先になるよ～");
+      return;
+  }
+  
+  switch(sendAllMode){
+    case 1:
+      setSendAllMode(0);
+      var maxIdNum=Number(selectDB(profileDB,"MAXIMUM (ID_num)",""));
+      var pushTo=[];
+      for(var i=1;i<=maxIdNum;i++){
+          pushTo.push(selectDB(profileDB,"ID","where ID_num="+i).toString());
+      }
+      pushMulti(messageReceive,pushTo);
       return;
   }
   
@@ -165,12 +179,24 @@ function doPost(e) {
       setTranslateMode(usrNum,1);
       messageSend="翻訳したい文章を入力してね。";
       break;
+    case "一斉送信":
+      if(usrNum==1){
+        setSendAllMode(1);
+        messageSend="一斉送信する内容を教えて";
+      }else{
+        messageSend="この機能は晶栄様しか使えませんゆえ。"
+      }
+      break;
     default:
       messageSend= messageReceive+"にゃ";
       break;
   }
   
   reply(replyToken,messageSend);
+}
+
+function setSendAllMode(num){
+  properties.setProperty("sendAllMode",num);
 }
 
 function remindMemo(id,msg){
@@ -243,7 +269,6 @@ function setMemoMode(usrid,num){
   //0:false,1:add,2:delete,3:remind
   eval("memoModeArray.key"+usrid+"="+num);
   var temp=JSON.stringify(memoModeArray);
-  console.log(temp);
   properties.setProperty("memoMode",temp);
 }
 
@@ -271,15 +296,17 @@ function setTranslateMode(usrid,num){
 
 function morningCall(cron,row,sheet) {
   var dayWeek = date.getDay();
-  var userid=cron[6];
   var msg;
   switch(dayWeek){
     case 1:
-      msg='おはよー、月曜だね。\n今週もがんばろー';
+      msg='おはよー、月曜だね。\n今週もがんばるにゃん=^_^=';
       break;
   }
-  var pushTo = selectDB(profileDB,"ID","where ID_num="+userid).toString();
-  push(msg,pushTo);
+  var pushTo=[];
+  for(var i=1;i<=maxIdNum;i++){
+    pushTo.push(selectDB(profileDB,"ID","where ID_num="+i).toString());
+  }
+  pushMulti(msg,pushTo);
 }
 
 function remindCronFunction(cron,row,sheet){

@@ -23,7 +23,29 @@ function push(text,to) {
     "payload" : JSON.stringify(postData)
   };
   send_log(options);
-  return UrlFetchApp.fetch(pushUrl, options);
+  UrlFetchApp.fetch(pushUrl, options);
+}
+
+/**
+ * 指定のuser_idにpushをする
+ */
+function pushMulti(text,toArray) {
+  var postData = {
+    "to" : toArray,
+    "messages" : [
+      {
+        'type':'text',
+        'text':text,
+      }
+    ]
+  };
+  var options = {
+    "method" : "post",
+    "headers" : headers,
+    "payload" : JSON.stringify(postData)
+  };
+  send_log(options);
+  UrlFetchApp.fetch(pushMultiUrl, options);
 }
  
 /**
