@@ -30,14 +30,24 @@ function doPost(e) {
   var json = JSON.parse(e.postData.contents);
   log(json);
   replyToken = json.events[0].replyToken;
-  var messageReceive = json.events[0].message.text;
-  var messageSend="";
   var usrID=json.events[0].source.userId;
-  var usrNum=getusrNum(usrID);
+  var usrNum=getusrNum(usrID); 
   var memoMode=eval("memoModeArray.key"+usrNum);
   var sendMode=eval("sendModeArray.key"+usrNum);
   var enrollMode=eval("enrollModeArray.key"+usrNum);
   var translateMode=eval("translateModeArray.key"+usrNum);
+  
+  switch(json.events[0].message.type){
+    case "image":
+      var blob = get_line_image(json.events[0].message.id);
+      // 全部画像として扱っちゃう
+      var text = ocr(blob);
+      reply(replyToken,text);
+      return;
+  }
+  
+  var messageReceive = json.events[0].message.text;
+  var messageSend="";  
    
   switch(enrollMode){
     case 1:
@@ -302,6 +312,7 @@ function morningCall(cron,row,sheet) {
       msg='おはよー、月曜だね。\n今週もがんばるにゃん=^_^=';
       break;
   }
+  var maxIdNum=Number(selectDB(profileDB,"MAXIMUM (ID_num)",""));  
   var pushTo=[];
   for(var i=1;i<=maxIdNum;i++){
     pushTo.push(selectDB(profileDB,"ID","where ID_num="+i).toString());
